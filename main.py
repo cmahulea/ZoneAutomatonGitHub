@@ -3,8 +3,7 @@ from TimedAutomaton import TimedFiniteAutomaton
 from ZoneAutomaton import ZoneAutomaton  # Import the ZoneAutomaton class
 
 
-def print_hi(name):
-    print(f'Hi, {name}')
+
 
 
 def main():
