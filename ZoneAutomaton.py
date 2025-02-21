@@ -97,3 +97,43 @@ class ZoneAutomaton:
         for transition in self.transitions:
             print(f"  {transition[0]} -- {transition[1]} --> {transition[2]}")
         print(f"Initial States: {self.initial_states}")
+
+    def draw_automaton(self, filename="zone_automaton", format="pdf"):
+        """
+        Dibuja el autómata de zonas usando Graphviz y guarda el resultado en un archivo.
+
+        :param filename: Nombre base del archivo de salida (sin extensión).
+        :param format: Formato de salida (por ejemplo, 'png', 'pdf').
+        :return: Objeto Digraph de graphviz.
+        """
+        from graphviz import Digraph
+
+        # Función auxiliar para formatear la zona (intervalo)
+        def format_zone(zone):
+            start, end, start_inc, end_inc = zone
+            start_bracket = "[" if start_inc else "("
+            end_bracket = "]" if end_inc else ")"
+            return f"{start_bracket}{start}, {end}{end_bracket}"
+
+        dot = Digraph(comment="Zone Automaton")
+
+        # Crear nodos para cada estado extendido
+        for state in self.states:
+            state_name, zone = state
+            # Se genera un identificador único para cada nodo a partir de sus componentes
+            node_id = f"{state_name}_{zone[0]}_{zone[1]}_{int(zone[2])}_{int(zone[3])}"
+            label = f"{state_name}\n{format_zone(zone)}"
+            print("Label=",label)
+            dot.node(node_id, label=label)
+
+        # Crear arcos para cada transición
+        for src, event, dst in self.transitions:
+            src_name, src_zone = src
+            dst_name, dst_zone = dst
+            src_id = f"{src_name}_{src_zone[0]}_{src_zone[1]}_{int(src_zone[2])}_{int(src_zone[3])}"
+            dst_id = f"{dst_name}_{dst_zone[0]}_{dst_zone[1]}_{int(dst_zone[2])}_{int(dst_zone[3])}"
+            dot.edge(src_id, dst_id, label=str(event))
+
+        # Renderiza y guarda el archivo
+        dot.render(filename, format=format, cleanup=True)
+        return dot

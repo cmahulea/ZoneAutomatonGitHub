@@ -37,6 +37,7 @@ def main():
     print("\n=== Zone Automaton ===")
     zone_automaton.print_automaton()
 
+    zone_automaton.draw_automaton()
 
 if __name__ == '__main__':
     main()
