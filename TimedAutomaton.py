@@ -172,3 +172,68 @@ class TimedFiniteAutomaton:
             if not incoming_transitions or all(self.reset_function(t) is not None for t in incoming_transitions):
                 reset_states.add(state)
         return sorted(reset_states)
+
+    def compute_all_zones(self) -> dict:
+        """
+        Computes the zones (as sets of bounds) for all states in the timed automaton.
+        The computation is done in two steps:
+          Step 1: For each transition t = (p, g, r, q), add the guard bounds from timing_function(t)
+                  to state p. If the transition resets the clock (i.e. reset_function(t) is not None),
+                  add the reset bounds to both states p and q.
+          Step 2: For transitions with no reset (reset_function(t) is None), propagate the bounds from
+                  the source to the destination along the acyclic subgraph defined by these transitions.
+                  A topological order is computed and used for this propagation.
+
+        Returns:
+            A dictionary mapping each state to a set of bounds (floats).
+        """
+        # Initialize zones: a dictionary mapping each state to an empty set.
+        zones = {state: set() for state in self.states}
+
+        # Step 1: Add guard and reset bounds.
+        for t in self.transitions:
+            p, event, q = t
+            # Get guard interval from timing_function.
+            guard_interval = self.timing_function(t)
+            guard_lb, guard_ub, _, _ = guard_interval
+            zones[p].add(guard_lb)
+            zones[p].add(guard_ub)
+            # If a reset occurs (i.e. reset_function returns non-None), add reset bounds to both p and q.
+            reset_interval = self.reset_function(t)
+            if reset_interval is not None:
+                reset_lb, reset_ub, _, _ = reset_interval
+                zones[p].add(reset_lb)
+                zones[p].add(reset_ub)
+                zones[q].add(reset_lb)
+                zones[q].add(reset_ub)
+
+        # Step 2: Propagate bounds along non-reset transitions.
+        # T_prime contains transitions with no reset.
+        T_prime = [t for t in self.transitions if self.reset_function(t) is None]
+        # Compute in-degrees for each state in the subgraph induced by T_prime.
+        in_degree = {state: 0 for state in self.states}
+        for t in T_prime:
+            _, _, q = t
+            in_degree[q] += 1
+
+        # Compute topological order using Kahn's algorithm.
+        L = [state for state in self.states if in_degree[state] == 0]
+        top_order = []
+        while L:
+            p = L.pop(0)
+            top_order.append(p)
+            for t in T_prime:
+                if t[0] == p:
+                    _, _, q = t
+                    in_degree[q] -= 1
+                    if in_degree[q] == 0:
+                        L.append(q)
+
+        # Propagate bounds: for each transition with no reset, add bounds from source to destination.
+        for p in top_order:
+            for t in T_prime:
+                if t[0] == p:
+                    _, _, q = t
+                    zones[q].update(zones[p])
+        ordered_zones = {state: sorted(zones[state]) for state in sorted(self.states)}
+        return ordered_zones

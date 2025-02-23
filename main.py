@@ -32,12 +32,16 @@ def main():
     reset_states = tfa.find_states_with_reset_inputs()
     print(f"\nStates where all input arcs reset the timer: {reset_states}")
 
-    # Construir y mostrar el autómata de zonas
-    zone_automaton = ZoneAutomaton.from_timed_automaton(tfa)
-    print("\n=== Zone Automaton ===")
-    zone_automaton.print_automaton()
+    zones = tfa.compute_all_zones()
 
-    zone_automaton.draw_automaton()
+    print(f"\nZones for all states:",zones)
+
+    # Construir y mostrar el autómata de zonas
+#    zone_automaton = ZoneAutomaton.from_timed_automaton(tfa)
+#    print("\n=== Zone Automaton ===")
+#    zone_automaton.print_automaton()
+
+#    zone_automaton.draw_automaton()
 
 if __name__ == '__main__':
     main()
