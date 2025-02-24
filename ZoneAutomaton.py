@@ -43,6 +43,9 @@ class ZoneAutomaton:
             intervals = []
             if not bounds:
                 return intervals
+            # If the last bound is infinity, remove it.
+            if bounds[-1] == float('inf'):
+                bounds = bounds[:-1]
             # Add degenerate interval at first bound: [b0, b0]
             intervals.append((bounds[0], bounds[0], True, True))
             for i in range(len(bounds) - 1):
@@ -90,9 +93,10 @@ class ZoneAutomaton:
                 src = extended_states_for_state[i]
                 dst = extended_states_for_state[i + 1]
                 label = time_event_label(zone_intervals[i], zone_intervals[i + 1])
+                print("src=",src,"label=",label,"dst=",dst)
                 transitions.add((src, label, dst))
                 events.add(label)
-
+            print("Events=",events)
             # For each logical event, add transitions from the extended states.
             for ext_state, zone in zip(extended_states_for_state, zone_intervals):
                 lower, upper, lower_inc, upper_inc = zone

@@ -1,4 +1,4 @@
-from TFA_ex1 import define_example1
+from TFA_ex2 import define_example2
 from TimedAutomaton import TimedFiniteAutomaton
 from ZoneAutomaton import ZoneAutomaton  # Import the ZoneAutomaton class
 
@@ -8,7 +8,7 @@ from ZoneAutomaton import ZoneAutomaton  # Import the ZoneAutomaton class
 
 def main():
     # Inicializar el autómata temporizado (asegúrate de que define_example1() retorne intervalos en el formato (m, n, m_inclusive, n_inclusive))
-    tfa = define_example1()
+    tfa = define_example2()
     print("=== Timed Finite Automaton ===")
     tfa.print_automaton()
 
@@ -32,9 +32,9 @@ def main():
 
     zone_automaton.draw_automaton("zone_automaton","pdf")
 
-    reduced_zone_automaton = zone_automaton.reduce_states()
+    #reduced_zone_automaton = zone_automaton.reduce_states()
 
-    reduced_zone_automaton.draw_automaton("zone_automaton_reduced","pdf")
+    #reduced_zone_automaton.draw_automaton("zone_automaton_reduced","pdf")
 
 if __name__ == '__main__':
     main()
