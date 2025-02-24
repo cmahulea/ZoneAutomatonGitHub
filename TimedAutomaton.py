@@ -113,66 +113,6 @@ class TimedFiniteAutomaton:
             print(f"  {transition}: Timing = {timing_interval}, Reset = {reset_interval}")
         print(f"Initial States: {self.initial_states}")
 
-    def compute_zones(self, state: str) -> list:
-        """
-        Computa el conjunto de zonas para un estado dado.
-        Las zonas se generan a partir de los extremos (con información de inclusión) de los intervalos
-        de temporización y reinicio asociados al estado. Cada zona se representa como:
-        (inicio, fin, inicio_inclusivo, fin_inclusivo).
-        """
-        # Paso 1: Recopilar todos los intervalos relevantes para el estado
-        intervals = []
-        for transition in self.transitions:
-            if transition[0] == state:
-                intervals.append(self.timing_function(transition))
-            if transition[2] == state:
-                reset_interval = self.reset_function(transition)
-                if reset_interval is not None:
-                    intervals.append(reset_interval)
-                else:
-                    intervals.append(self.timing_function(transition))
-
-        # Paso 2: Extraer extremos con su información de inclusión.
-        # Cada extremo se representa como (valor, tipo, inclusivo) donde tipo es 'L' para límite inferior o 'U' para superior.
-        endpoints = []
-        for (a, b, a_inc, b_inc) in intervals:
-            endpoints.append((a))
-            endpoints.append((b))
-
-        # Ordenar los extremos: por valor; en caso de empate, primero los límites inferiores y los cerrados.
-        endpoints = sorted(endpoints)
-
-        # Obtener los valores numéricos distintos
-        distinct_values = sorted(set(endpoints))
-        zones = []
-        # Agregar zona puntual si en el punto existe algún extremo cerrado.
-        for val in distinct_values:
-            zones.append((val, val, True, True))
-        # Para cada par de puntos consecutivos, definir la zona intermedia
-        for i in range(len(distinct_values) - 1):
-            left = distinct_values[i]
-            right = distinct_values[i + 1]
-            zones.append((left, right, False, False))
-        # Agregar la zona infinita a partir del último valor
-        last_val = distinct_values[-1]
-        zones.append((last_val, float('inf'), False, False))
-
-        # Ordenar las zonas para consistencia
-        zones = sorted(zones, key=lambda z: (z[0], z[1]))
-        return zones
-
-    def find_states_with_reset_inputs(self) -> list:
-        """
-        Encuentra los estados en los que todas las transiciones entrantes reinician el reloj,
-        incluyendo aquellos sin transiciones entrantes.
-        """
-        reset_states = set()
-        for state in self.states:
-            incoming_transitions = [t for t in self.transitions if t[2] == state]
-            if not incoming_transitions or all(self.reset_function(t) is not None for t in incoming_transitions):
-                reset_states.add(state)
-        return sorted(reset_states)
-
     def compute_all_zones(self) -> dict:
         """
         Computes the zones (as sets of bounds) for all states in the timed automaton.
@@ -190,6 +130,10 @@ class TimedFiniteAutomaton:
         # Initialize zones: a dictionary mapping each state to an empty set.
         zones = {state: set() for state in self.states}
 
+        # Add 0 to the clock bounds of the initial states.
+        for init_state in self.initial_states:
+            zones[init_state].add(0)
+
         # Step 1: Add guard and reset bounds.
         for t in self.transitions:
             p, event, q = t
@@ -202,8 +146,8 @@ class TimedFiniteAutomaton:
             reset_interval = self.reset_function(t)
             if reset_interval is not None:
                 reset_lb, reset_ub, _, _ = reset_interval
-                zones[p].add(reset_lb)
-                zones[p].add(reset_ub)
+#                zones[p].add(reset_lb)
+#                zones[p].add(reset_ub)
                 zones[q].add(reset_lb)
                 zones[q].add(reset_ub)
 
@@ -219,7 +163,9 @@ class TimedFiniteAutomaton:
         # Compute topological order using Kahn's algorithm.
         L = [state for state in self.states if in_degree[state] == 0]
         top_order = []
+        # print("Topological order:",L)
         while L:
+            # print("List L:",L)
             p = L.pop(0)
             top_order.append(p)
             for t in T_prime:
@@ -229,6 +175,7 @@ class TimedFiniteAutomaton:
                     if in_degree[q] == 0:
                         L.append(q)
 
+        print("Topological order:", top_order)
         # Propagate bounds: for each transition with no reset, add bounds from source to destination.
         for p in top_order:
             for t in T_prime:

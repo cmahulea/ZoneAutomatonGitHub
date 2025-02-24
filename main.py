@@ -21,27 +21,20 @@ def main():
     else:
         print("\nLa secuencia de eventos es inválida.")
 
-    # Computar las zonas para un estado dado (por ejemplo, "x4")
-    state_to_compute = "x2"
-    zones = tfa.compute_zones(state_to_compute)
-    print(f"\nZones for state {state_to_compute}:")
-    for zone in zones:
-        # Cada zona se representa como (inicio, fin, inicio_inclusivo, fin_inclusivo)
-        print(f"  Zone: {zone}")
-
-    reset_states = tfa.find_states_with_reset_inputs()
-    print(f"\nStates where all input arcs reset the timer: {reset_states}")
-
     zones = tfa.compute_all_zones()
 
     print(f"\nZones for all states:",zones)
 
     # Construir y mostrar el autómata de zonas
-#    zone_automaton = ZoneAutomaton.from_timed_automaton(tfa)
-#    print("\n=== Zone Automaton ===")
-#    zone_automaton.print_automaton()
+    zone_automaton = ZoneAutomaton.from_timed_automaton(tfa)
+    print("\n=== Zone Automaton ===")
+    zone_automaton.print_automaton()
 
-#    zone_automaton.draw_automaton()
+    zone_automaton.draw_automaton("zone_automaton","pdf")
+
+    reduced_zone_automaton = zone_automaton.reduce_states()
+
+    reduced_zone_automaton.draw_automaton("zone_automaton_reduced","pdf")
 
 if __name__ == '__main__':
     main()
