@@ -1,7 +1,7 @@
 from TFA_ex2 import define_example2
 from TimedAutomaton import TimedFiniteAutomaton
 from ZoneAutomaton import ZoneAutomaton  # Import the ZoneAutomaton class
-
+from TFA_ex2 import draw_observer
 
 
 
@@ -32,9 +32,20 @@ def main():
 
     zone_automaton.draw_automaton("zone_automaton","pdf")
 
-    #reduced_zone_automaton = zone_automaton.reduce_states()
+    reduced_zone_automaton = zone_automaton.reduce_states()
+    reduced_zone_automaton.draw_automaton("zone_automaton_reduced", "pdf")
 
-    #reduced_zone_automaton.draw_automaton("zone_automaton_reduced","pdf")
+    # Calcular el observador a partir del autómata de zonas
+    observer = reduced_zone_automaton.compute_observer()
+    print("\n=== Observer Automaton ===")
+    print("States:", observer["states"])
+    print("Events:", observer["events"])
+    print("Transitions:")
+    for transition in observer["transitions"]:
+        print(transition)
+    print("Initial State:", observer["initial_state"])
+    # Dibujar el observador en formato PDF.
+    draw_observer(observer, "observer_automaton", "pdf")
 
 if __name__ == '__main__':
     main()

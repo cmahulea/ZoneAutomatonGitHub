@@ -1,4 +1,6 @@
 from typing import Set, Tuple
+from graphviz import Digraph
+
 
 class ZoneAutomaton:
     def __init__(self,
@@ -93,7 +95,7 @@ class ZoneAutomaton:
                 src = extended_states_for_state[i]
                 dst = extended_states_for_state[i + 1]
                 label = time_event_label(zone_intervals[i], zone_intervals[i + 1])
-                print("src=",src,"label=",label,"dst=",dst)
+                #print("src=",src,"label=",label,"dst=",dst)
                 transitions.add((src, label, dst))
                 events.add(label)
             print("Events=",events)
@@ -146,7 +148,6 @@ class ZoneAutomaton:
         :param format: Formato de salida (por ejemplo, 'png', 'pdf').
         :return: Objeto Digraph de graphviz.
         """
-        from graphviz import Digraph
 
         # Función auxiliar para formatear la zona (intervalo)
         def format_zone(zone):
@@ -180,131 +181,122 @@ class ZoneAutomaton:
 
     def reduce_states(self):
         """
-        Returns a new ZoneAutomaton with reduced extended states.
-        Extended states (of the form (x, zone)) for the same discrete state x are merged
-        if they are connected only by a timed transition and if either the non-timed incoming
-        (or outgoing) transitions of the first state are empty or equal to those of the second.
-        Also, their zone intervals must be compatible for merging, meaning that the upper bound of the
-        first equals the lower bound of the second and the first interval is closed at its upper end.
-        The new zone is the convex hull (union) of the merged intervals.
+        Returns a new ZoneAutomaton with unreachable states removed.
+        Unreachable states are those that cannot be reached from any of the initial states
+        following the transitions.
         """
-        def is_timed_label(label: str) -> bool:
-            # A timed label is assumed to be either a numeric string or a numeric string followed by '+'.
-            return label.isdigit() or (label.endswith("+") and label[:-1].isdigit())
+        # Compute reachable states using a breadth-first search.
+        reachable_states = set()
+        frontier = list(self.initial_states)
+        while frontier:
+            current = frontier.pop(0)
+            if current not in reachable_states:
+                reachable_states.add(current)
+                # Look for transitions originating from the current state.
+                for (src, event, dst) in self.transitions:
+                    if src == current and dst not in reachable_states:
+                        frontier.append(dst)
 
-        def union_intervals(i1: Tuple[float, float, bool, bool],
-                            i2: Tuple[float, float, bool, bool]) -> Tuple[float, float, bool, bool]:
-            """
-            Returns the convex hull (union) of two adjacent intervals.
-            Assumes:
-                i1 = (l1, u1, li1, ui1) and i2 = (l2, u2, li2, ui2) with u1 == l2.
-            The resulting interval is (l1, u2, li1, ui2).
-            """
-            return (i1[0], i2[1], i1[2], i2[3])
+        # Filter transitions: keep only those whose source and destination are reachable.
+        reduced_transitions = {
+            (src, event, dst)
+            for (src, event, dst) in self.transitions
+            if src in reachable_states and dst in reachable_states
+        }
 
-        def get_non_timed_outgoing(ext_state, transitions) -> Set[Tuple[str, Tuple[str, Tuple[float, float, bool, bool]]]]:
-            # Returns outgoing transitions (label, destination) from ext_state excluding timed transitions.
-            return {(label, dst) for (src, label, dst) in transitions
-                    if src == ext_state and not is_timed_label(label)}
+        # Recompute the events set from the remaining transitions.
+        reduced_events = {event for (_, event, _) in reduced_transitions}
 
-        def get_non_timed_incoming(ext_state, transitions) -> Set[Tuple[Tuple[str, Tuple[float, float, bool, bool]], str]]:
-            # Returns incoming transitions (source, label) to ext_state excluding timed transitions.
-            return {(src, label) for (src, label, dst) in transitions
-                    if dst == ext_state and not is_timed_label(label)}
+        # The initial states remain those in the intersection.
+        reduced_initial_states = self.initial_states.intersection(reachable_states)
 
-        def can_merge(s1, s2) -> bool:
-            """
-            Determines if two extended states s1 and s2 (for the same discrete state) can be merged.
-            They can be merged if:
-              (a) There is a timed transition from s1 to s2,
-              (b) Their non-timed incoming transitions are either empty (for s1) or equal for both s1 and s2,
-              (c) Their non-timed outgoing transitions are either empty (for s1) or equal for both s1 and s2, and
-              (d) Their zone intervals are compatible for merging:
-                  Let i1 = s1[1] and i2 = s2[1]. Then i1[1] (the upper bound of i1)
-                  must equal i2[0] (the lower bound of i2) and i1 must be closed at its upper bound.
-            """
+        # Return a new ZoneAutomaton with the reduced components.
+        return ZoneAutomaton(reachable_states, reduced_events, reduced_transitions, reduced_initial_states)
 
-            print("Check merging ",s1," with ",s2)
-            if s1[0] != s2[0]:
-                return False
-            if not any(src == s1 and dst == s2 and is_timed_label(label)
-                       for (src, label, dst) in self.transitions):
-                #print("src=",src,"label=",label,"dst=",dst)
-                return False
-
-            nt_in1 = get_non_timed_incoming(s1, self.transitions)
-            nt_in2 = get_non_timed_incoming(s2, self.transitions)
-            nt_out1 = get_non_timed_outgoing(s1, self.transitions)
-            nt_out2 = get_non_timed_outgoing(s2, self.transitions)
-            print("nt_in1=",nt_in1,"nt_in2=",nt_in2,"nt_out1=",nt_out1,"nt_out2=",nt_out2)
-
-            # Allow merging if s1 has no non-timed incoming transitions or if they match s2.
-            if nt_in1 and nt_in1 != nt_in2:
-                return False
-            # Similarly for outgoing transitions.
-            if nt_out1 and nt_out1 != nt_out2:
-                return False
-
-            i1, i2 = s1[1], s2[1]
-            # The intervals must be adjacent.
-            if i1[1] != i2[0]:
-                return False
-            # To merge, the first interval must be closed at its upper bound.
-            if not i1[3]:
-                return False
-            print("\nMergeable")
-            return True
-
-        # Group extended states by their discrete state.
-        groups = {}
-        for ext_state in self.states:
-            x, zone = ext_state
-            groups.setdefault(x, []).append(ext_state)
-
-        print("Groups=",groups)
-        new_states = set()
-        mapping = {}  # Maps each original extended state to its merged (new) extended state.
-        new_initial_states = set()
-
-        for x, state_list in groups.items():
-            # Sort extended states for x by the lower bound of their zone.
-            state_list.sort(key=lambda s: s[1][0])
-            merged_group = []
-            for s in state_list:
-                if merged_group and can_merge(merged_group[-1], s):
-                    # Merge current extended state with s.
-                    merged_group[-1] = (x, union_intervals(merged_group[-1][1], s[1]))
-                else:
-                    merged_group.append(s)
-            # Build mapping: each original extended state is mapped to the merged state covering it.
-            for old_state in state_list:
-                assigned = False
-                for m in merged_group:
-                    if m[1][0] <= old_state[1][0] and m[1][1] >= old_state[1][1]:
-                        mapping[old_state] = m
-                        assigned = True
-                        break
-                if not assigned:
-                    mapping[old_state] = old_state
-            new_states.update(merged_group)
-            # For discrete initial states, choose the merged state with the smallest lower bound.
-            if x in self._discrete_initial_states():
-                new_initial_states.add(min(merged_group, key=lambda s: s[1][0]))
-
-        # Remap transitions using the mapping.
-        new_transitions = set()
-        for (src, label, dst) in self.transitions:
-            new_src = mapping.get(src, src)
-            new_dst = mapping.get(dst, dst)
-            new_transitions.add((new_src, label, new_dst))
-        new_events = {e for (_, e, _) in new_transitions}
-
-        return ZoneAutomaton(new_states, new_events, new_transitions, new_initial_states)
-
-    def _discrete_initial_states(self) -> Set[str]:
+    def _is_observable(self, event: str) -> bool:
         """
-        Helper method to extract the underlying discrete initial states from the extended initial states.
+        Returns True if the event is observable.
+        Unobservable events are assumed to have parentheses around them.
         """
-        return {x for (x, _) in self.initial_states}
+        return not (event.startswith("(") and event.endswith(")"))
+
+    def _compute_unobservable_closure(self, states: set) -> set:
+        """
+        Computes the closure of a set of extended states with respect to unobservable transitions.
+        That is, it returns all states reachable from any state in 'states' by following transitions
+        whose events are unobservable.
+        """
+        closure = set(states)
+        stack = list(states)
+        while stack:
+            current_state = stack.pop()
+            for (src, event, dst) in self.transitions:
+                if src == current_state and not self._is_observable(event) and dst not in closure:
+                    closure.add(dst)
+                    stack.append(dst)
+        return closure
+
+    def compute_observer(self):
+        """
+        Computes the observer automaton assuming that unobservable events are those
+        whose labels appear between parentheses (e.g., '(e1)' is unobservable).
+
+        The observer is constructed in a standard way:
+          1. The initial observer state is the unobservable closure of the set of initial states.
+          2. For each observer state Q and each observable event e, the next state is computed as
+             the unobservable closure of all states reachable via an e-transition from any state in Q.
+          3. Only observable events are retained in the observer transitions.
+
+        Returns:
+            A dictionary representing the observer automaton with the following keys:
+              - "states": a set of frozensets of extended states (each frozenset is an observer state)
+              - "events": the set of observable events
+              - "transitions": a set of tuples (source, event, destination) where source and destination are frozensets
+              - "initial_state": the initial observer state (a frozenset)
+        """
+        # Compute the initial observer state as the closure of the initial states.
+        initial_closure = self._compute_unobservable_closure(self.initial_states)
+        initial_obs = frozenset(initial_closure)
+
+        observer_states = {initial_obs}
+        observer_transitions = {}  # key: (observer_state, event), value: next observer state
+        queue = [initial_obs]
+
+        # Consider only observable events.
+        observable_events = {e for e in self.events if self._is_observable(e)}
+
+        while queue:
+            current_obs_state = queue.pop(0)
+            for event in observable_events:
+                next_states = set()
+                # For every state in the current observer state, check transitions labeled with the observable event.
+                for state in current_obs_state:
+                    for (src, trans_event, dst) in self.transitions:
+                        if src == state and trans_event == event:
+                            next_states.add(dst)
+                if next_states:
+                    # Compute the unobservable closure of the successors.
+                    next_closure = frozenset(self._compute_unobservable_closure(next_states))
+                    # Record the transition.
+                    observer_transitions[(current_obs_state, event)] = next_closure
+                    if next_closure not in observer_states:
+                        observer_states.add(next_closure)
+                        queue.append(next_closure)
+
+        # Format the transitions as a set of (source, event, destination) tuples.
+        observer_transitions_set = {
+            (src, event, dst) for ((src, event), dst) in observer_transitions.items()
+        }
+
+        return {
+            "states": observer_states,
+            "events": observable_events,
+            "transitions": observer_transitions_set,
+            "initial_state": initial_obs
+        }
+
+
+
+
 
 
