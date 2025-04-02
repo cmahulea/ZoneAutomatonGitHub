@@ -114,19 +114,7 @@ class TimedFiniteAutomaton:
         print(f"Initial States: {self.initial_states}")
 
     def compute_all_zones(self) -> dict:
-        """
-        Computes the zones (as sets of bounds) for all states in the timed automaton.
-        The computation is done in two steps:
-          Step 1: For each transition t = (p, g, r, q), add the guard bounds from timing_function(t)
-                  to state p. If the transition resets the clock (i.e. reset_function(t) is not None),
-                  add the reset bounds to both states p and q.
-          Step 2: For transitions with no reset (reset_function(t) is None), propagate the bounds from
-                  the source to the destination along the acyclic subgraph defined by these transitions.
-                  A topological order is computed and used for this propagation.
 
-        Returns:
-            A dictionary mapping each state to a set of bounds (floats).
-        """
         # Initialize zones: a dictionary mapping each state to an empty set.
         zones = {state: set() for state in self.states}
 
@@ -146,41 +134,45 @@ class TimedFiniteAutomaton:
             reset_interval = self.reset_function(t)
             if reset_interval is not None:
                 reset_lb, reset_ub, _, _ = reset_interval
-#                zones[p].add(reset_lb)
-#                zones[p].add(reset_ub)
                 zones[q].add(reset_lb)
-                zones[q].add(reset_ub)
-
-        # Step 2: Propagate bounds along non-reset transitions.
-        # T_prime contains transitions with no reset.
-        T_prime = [t for t in self.transitions if self.reset_function(t) is None]
-        # Compute in-degrees for each state in the subgraph induced by T_prime.
-        in_degree = {state: 0 for state in self.states}
-        for t in T_prime:
-            _, _, q = t
-            in_degree[q] += 1
-
-        # Compute topological order using Kahn's algorithm.
-        L = [state for state in self.states if in_degree[state] == 0]
-        top_order = []
-        # print("Topological order:",L)
-        while L:
-            # print("List L:",L)
-            p = L.pop(0)
-            top_order.append(p)
-            for t in T_prime:
-                if t[0] == p:
-                    _, _, q = t
-                    in_degree[q] -= 1
-                    if in_degree[q] == 0:
-                        L.append(q)
-
-        print("Topological order:", top_order)
-        # Propagate bounds: for each transition with no reset, add bounds from source to destination.
-        for p in top_order:
-            for t in T_prime:
-                if t[0] == p:
-                    _, _, q = t
-                    zones[q].update(zones[p])
+            else:  #if the timer is not reset, add the guard interval to the output node
+                zones[q].add(guard_lb)
+                zones[q].add(guard_ub)
+        # Add infinity to the clock bounds of every state.
+        for state in zones:
+            zones[state].add(float('inf'))
         ordered_zones = {state: sorted(zones[state]) for state in sorted(self.states)}
         return ordered_zones
+
+    def compute_all_guard_and_reset_values(self) -> list:
+        """
+        Computa una lista ordenada con todos los valores numéricos presentes en las condiciones
+        de guardia (guards) y en los reset bounds de las transiciones.
+
+        Se sigue la siguiente estrategia:
+          - Se recorren todas las transiciones y se extraen los valores del intervalo obtenido
+            mediante timing_function (guard_lb y guard_ub).
+          - Para cada transición que produzca reset (reset_function devuelve no None),
+            se extraen los valores (reset_lb y reset_ub) del intervalo de reinicio.
+          - Se agregan explícitamente 0 y el infinito (float('inf')).
+
+        Retorna:
+          Una lista ordenada con todos estos valores.
+        """
+        values = set()
+        for t in self.transitions:
+            # Extraemos los valores de guardia.
+            guard_interval = self.timing_function(t)
+            guard_lb, guard_ub, _, _ = guard_interval
+            values.add(guard_lb)
+            values.add(guard_ub)
+            # Extraemos los valores de reset, si existen.
+            reset_interval = self.reset_function(t)
+            if reset_interval is not None:
+                reset_lb, reset_ub, _, _ = reset_interval
+                values.add(reset_lb)
+                values.add(reset_ub)
+        # Agregamos los extremos.
+        values.add(0)
+        values.add(float('inf'))
+        return sorted(values)

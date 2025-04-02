@@ -79,17 +79,19 @@ def draw_observer(observer, filename, format):
     """
     Dibuja el autómata observador utilizando Graphviz.
 
+    Si entre dos nodos (o self-loops) existen varias transiciones, se dibuja un único arco con la
+    lista de eventos en orden ascendente, delimitados por {}.
+
     :param observer: Diccionario devuelto por compute_observer(), que contiene:
                      - "states": conjunto de estados observadores (frozensets de estados extendidos),
                                  donde cada estado extendido es una tupla (estado, zona).
                      - "events": conjunto de eventos observables.
-                     - "transitions": conjunto de transiciones (source, event, destination).
+                     - "transitions": conjunto de transiciones (source, event, destination) donde source y destination son frozensets.
                      - "initial_state": el estado observador inicial.
     :param filename: Nombre base del archivo de salida (sin extensión).
     :param format: Formato de salida (por ejemplo, 'png', 'pdf').
     :return: Objeto Digraph generado.
     """
-
     def format_zone(zone):
         a, b, c, d = zone
         start_bracket = "[" if c else "("
@@ -105,25 +107,34 @@ def draw_observer(observer, filename, format):
 
     dot = Digraph(comment="Observer Automaton")
 
-    # Crear nodos para cada estado observador.
+    # Asignar un id único a cada estado observador.
     state_to_node = {}
     for obs_state in observer["states"]:
-        # Cada obs_state es un frozenset de estados extendidos.
         node_id = f"node_{hash(obs_state)}"
         state_to_node[obs_state] = node_id
-        # Formateamos la etiqueta uniendo la representación de cada estado extendido.
         label = "\n".join(sorted([format_extended_state(s) for s in obs_state]))
-        # Se resalta el estado inicial.
+        # Resaltar el estado inicial.
         if obs_state == observer["initial_state"]:
             dot.node(node_id, label=label, shape="doublecircle", color="green")
         else:
             dot.node(node_id, label=label)
 
-    # Crear arcos para cada transición.
+    # Agrupar transiciones: clave (src, dst) y valor: conjunto de eventos.
+    edge_groups = {}
     for (src, event, dst) in observer["transitions"]:
+        key = (src, dst)
+        if key not in edge_groups:
+            edge_groups[key] = set()
+        edge_groups[key].add(event)
+
+    # Dibujar las aristas agrupadas.
+    for (src, dst), events in edge_groups.items():
         src_id = state_to_node[src]
         dst_id = state_to_node[dst]
-        dot.edge(src_id, dst_id, label=event)
+        # Ordenar los eventos (en orden ascendente, como cadenas)
+        sorted_events = sorted(events)
+        label = "{" + ", ".join(sorted_events) + "}"
+        dot.edge(src_id, dst_id, label=label)
 
     dot.render(filename, format=format, cleanup=True)
     return dot

@@ -32,11 +32,13 @@ def main():
 
     zone_automaton.draw_automaton("zone_automaton","pdf")
 
-    reduced_zone_automaton = zone_automaton.reduce_states()
-    reduced_zone_automaton.draw_automaton("zone_automaton_reduced", "pdf")
+    #reduced_zone_automaton1 = zone_automaton.reduce_adjacent_states()
+    #reduced_zone_automaton = reduced_zone_automaton1.reduce_states()
+    #reduced_zone_automaton.draw_automaton("zone_automaton_reduced", "pdf")
 
     # Calcular el observador a partir del autómata de zonas
-    observer = reduced_zone_automaton.compute_observer()
+#    observer = reduced_zone_automaton.compute_observer()
+    observer = zone_automaton.compute_observer()
     print("\n=== Observer Automaton ===")
     print("States:", observer["states"])
     print("Events:", observer["events"])
