@@ -106,6 +106,8 @@ def draw_observer(observer, filename, format):
         return f"{state_name} {format_zone(zone)}"
 
     dot = Digraph(comment="Observer Automaton")
+    # Agregar atributos para forzar un tamaño razonable y evitar errores de márgenes excesivos.
+    dot.attr('graph', size="8.5,11!", margin="0.1")
 
     # Asignar un id único a cada estado observador.
     state_to_node = {}

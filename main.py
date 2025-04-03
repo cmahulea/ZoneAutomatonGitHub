@@ -19,7 +19,7 @@ def main():
         final_state, final_clock = result
         print(f"\nFinal state: {final_state}, Final clock: {final_clock}")
     else:
-        print("\nLa secuencia de eventos es inválida.")
+        print("\nThe event sequence is invalid.")
 
     zones = tfa.compute_all_zones()
 
@@ -27,25 +27,26 @@ def main():
 
     # Construir y mostrar el autómata de zonas
     zone_automaton = ZoneAutomaton.from_timed_automaton(tfa)
+    zone_automaton = zone_automaton.reduce_states()
     print("\n=== Zone Automaton ===")
-    zone_automaton.print_automaton()
+    print("Number of states in the zone automaton:", len(zone_automaton.states))
+    print("Number of transitions in the zone automaton:", len(zone_automaton.transitions))
+    print("Number of events in the zone automaton:", len(zone_automaton.events))
 
     zone_automaton.draw_automaton("zone_automaton","pdf")
 
     #reduced_zone_automaton1 = zone_automaton.reduce_adjacent_states()
-    #reduced_zone_automaton = reduced_zone_automaton1.reduce_states()
     #reduced_zone_automaton.draw_automaton("zone_automaton_reduced", "pdf")
 
     # Calcular el observador a partir del autómata de zonas
 #    observer = reduced_zone_automaton.compute_observer()
     observer = zone_automaton.compute_observer()
     print("\n=== Observer Automaton ===")
-    print("States:", observer["states"])
-    print("Events:", observer["events"])
-    print("Transitions:")
-    for transition in observer["transitions"]:
-        print(transition)
-    print("Initial State:", observer["initial_state"])
+    print("Number of states in the observer:", len(observer["states"]))
+    print("Number of transitions in the observer:", len(observer["transitions"]))
+    print("Number of events in the observer:", len(observer["events"]))
+    print("Initial observer state:", observer["initial_state"])
+    draw_observer(observer, "observer_automaton", "pdf")
     # Dibujar el observador en formato PDF.
     draw_observer(observer, "observer_automaton", "pdf")
 

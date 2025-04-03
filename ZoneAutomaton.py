@@ -147,7 +147,8 @@ class ZoneAutomaton:
 
         # Process each state in the TFA.
         for state in timed_automaton.states:
-            bounds = all_bounds.get(state, [])
+            #bounds = all_bounds.get(state, [])
+            bounds = all_bounds_values
             # Use state-specific intervals if available; otherwise, fall back to global intervals.
             zone_intervals = compute_intervals(bounds) if bounds else zone_intervals_global
             extended_states_for_state = []
@@ -166,7 +167,7 @@ class ZoneAutomaton:
                 transitions.add((src, label, dst))
                 events.add(label)
 
-            print('Timed Events=',timed_event_list)
+            #print('Timed Events=',timed_event_list)
 
             # Para cada estado extendido, se añaden self-loops para cada evento temporizado
             # cuyo valor numérico (con epsilon en caso de '+' si procede) se encuentre dentro del intervalo.
@@ -221,7 +222,6 @@ class ZoneAutomaton:
         :return: Objeto Digraph de graphviz.
         """
 
-        # Función auxiliar para formatear la zona (intervalo)
         def format_zone(zone):
             start, end, start_inc, end_inc = zone
             start_bracket = "[" if start_inc else "("
@@ -229,6 +229,8 @@ class ZoneAutomaton:
             return f"{start_bracket}{start}, {end}{end_bracket}"
 
         dot = Digraph(comment="Zone Automaton")
+        # Establecer atributos para controlar el tamaño y margen de la gráfica, evitando dimensiones excesivas.
+        dot.attr('graph', size="8.5,11!", margin="0.1")
 
         # Crear un diccionario para asignar un id único a cada nodo
         node_ids = {}
