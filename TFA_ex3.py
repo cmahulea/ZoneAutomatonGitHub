@@ -9,16 +9,11 @@ def timing_function(transition: Tuple[str, str, str]) -> Tuple[float, float, boo
         ("x0", "e1", "x1"): (0, float('inf'), True, False),
         ("x1", "e2", "x2"): (0, float('inf'), True, False),
         ("x1", "e3", "x3"): (0, float('inf'), True, False),
-        ("x2", "e4", "x4"): (8640, 8640, True, True),
+        ("x2", "e4", "x4"): (8000, 8640, True, True),
         ("x4", "(e5)", "x5"): (5, 15, True, True),
         ("x5", "(e6)", "x6"): (15, 30, True, True),
         ("x3", "(e7)", "x6"): (15, 30, True, True),
         ("x6", "e8", "x7"): (1080, 1560, True, True),
-        ("x7", "(e9)", "x8"): (40, 50, True, True),
-        ("x8", "e10", "x9"): (60, 90, True, True),
-        ("x9", "(e11)", "x10"): (480, 510, True, True),
-        ("x10", "(e12)", "x11"): (910, 1020, True, True),
-        ("x11", "e13", "x12"): (1270, 1620, True, True)
     }
     return timing_map.get(transition, (0, 0, True, True))
 
@@ -33,18 +28,13 @@ def reset_function(transition: Tuple[str, str, str]) -> Optional[Tuple[float, fl
         #("x5", "e6", "x6"): (15, 30, True, True),
         #("x3", "e7", "x6"): (15, 30, True, True),
         ("x6", "e8", "x7"): (0, 0, True, True),
-        ("x7", "e9", "x8"): (0, 0, True, True),
-        ("x8", "e10", "x9"): (0, 0, True, True),
-        #("x9", "e11", "x10"): (480, 510, True, True),
-        #("x10", "e12", "x11"): (430, 510, True, True),
-        ("x11", "e13", "x12"): (0, 0, True, True)
     }
     return reset_map.get(transition, None)
 
 def define_example():
     # Definir los parámetros del autómata
-    states = {"x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12"}
-    events = {"e1","e2","e3","e4","(e5)","(e6)","(e7)","e8","(e9)","e10","(e11)","(e12)","e13"}
+    states = {"x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7"}
+    events = {"e1","e2","e3","e4","(e5)","(e6)","(e7)","e8"}
     transitions = {
         ("x0", "e1", "x1"),
         ("x1", "e2", "x2"),
@@ -54,11 +44,6 @@ def define_example():
         ("x5", "(e6)", "x6"),
         ("x3", "(e7)", "x6"),
         ("x6", "e8", "x7"),
-        ("x7", "(e9)", "x8"),
-        ("x8", "e10", "x9"),
-        ("x9", "(e11)", "x10"),
-        ("x10", "(e12)", "x11"),
-        ("x11", "e13", "x12")
     }
     initial_states = {"x0"}
 
@@ -135,11 +120,7 @@ def draw_observer(observer, filename, format):
         dst_id = state_to_node[dst]
         # Ordenar los eventos (en orden ascendente, como cadenas)
         sorted_events = sorted(events)
-        if len(sorted_events) > 1:
-            label = "{" + ", ".join(sorted_events) + "}"
-        else:
-            label = "".join(
-                sorted_events)  # O simplemente sorted_events[0] si estás seguro de que siempre hay al menos un evento
+        label = "{" + ", ".join(sorted_events) + "}"
         dot.edge(src_id, dst_id, label=label)
 
     dot.render(filename, format=format, cleanup=True)

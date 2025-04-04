@@ -147,8 +147,8 @@ class ZoneAutomaton:
 
         # Process each state in the TFA.
         for state in timed_automaton.states:
-            #bounds = all_bounds.get(state, [])
-            bounds = all_bounds_values
+            bounds = all_bounds.get(state, [])
+            #bounds = all_bounds_values
             # Use state-specific intervals if available; otherwise, fall back to global intervals.
             zone_intervals = compute_intervals(bounds) if bounds else zone_intervals_global
             extended_states_for_state = []
@@ -254,7 +254,11 @@ class ZoneAutomaton:
             src_id = node_ids[src]
             dst_id = node_ids[dst]
             sorted_events = sorted(events)
-            label = "{" + ", ".join(sorted_events) + "}"
+            if len(sorted_events) > 1:
+                label = "{" + ", ".join(sorted_events) + "}"
+            else:
+                label = "".join(
+                    sorted_events)  # O simplemente sorted_events[0] si estás seguro de que siempre hay al menos un evento
             dot.edge(src_id, dst_id, label=label)
 
         dot.render(filename, format=format, cleanup=True)
@@ -383,6 +387,8 @@ class ZoneAutomaton:
         # Paso 1: calcular el estado observador inicial (la clausura no observable de los estados iniciales)
         initial_closure = self._compute_unobservable_closure(self.initial_states)
         initial_obs = frozenset(initial_closure)
+        #print('initial_obs',initial_obs)
+
         # Solo consideramos el estado inicial si sus intervalos son compatibles.
         if common_zone(initial_obs) is None:
             # Si no hay intersección, se descarta (o se puede lanzar un error)
@@ -395,13 +401,15 @@ class ZoneAutomaton:
         # Se consideran solo los eventos observables.
         observable_events = {e for e in self.events if self._is_observable(e)}
 
+        print('Observable event:',observable_events)
         # Bucle principal: para cada estado observador y cada evento observable,
         # se calcula el conjunto de estados alcanzables y se verifica que tengan un intervalo común.
         while queue:
             current_obs_state = queue.pop(0)
+            #print('Current_obs_state',current_obs_state)
             # Verificar que el estado observador tenga un intervalo común válido.
-            if common_zone(current_obs_state) is None:
-                continue
+            #if common_zone(current_obs_state) is None:
+            #    continue
             for event in observable_events:
                 next_states = set()
                 for state in current_obs_state:
@@ -410,11 +418,11 @@ class ZoneAutomaton:
                             next_states.add(dst)
                 if next_states:
                     next_closure = frozenset(self._compute_unobservable_closure(next_states))
-                    if common_zone(next_closure) is not None:
-                        observer_transitions[(current_obs_state, event)] = next_closure
-                        if next_closure not in observer_states:
-                            observer_states.add(next_closure)
-                            queue.append(next_closure)
+                    #if common_zone(next_closure) is not None:
+                    observer_transitions[(current_obs_state, event)] = next_closure
+                    if next_closure not in observer_states:
+                        observer_states.add(next_closure)
+                        queue.append(next_closure)
 
         observer_transitions_set = {
             (src, event, dst) for ((src, event), dst) in observer_transitions.items()
