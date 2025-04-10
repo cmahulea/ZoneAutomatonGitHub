@@ -552,3 +552,61 @@ class ZoneAutomaton:
                         except ValueError:
                             continue
         return self
+
+    def draw_automaton_by_state(self, filename, format):
+        """
+        Dibuja el autómata de zonas agrupando los estados extendidos en filas,
+        de manera que cada fila corresponde a un estado discreto y sus diferentes zonas,
+        y establece la orientación en landscape.
+        """
+
+        def format_zone(zone):
+            start, end, start_inc, end_inc = zone
+            start_bracket = "[" if start_inc else "("
+            end_bracket = "]" if end_inc else ")"
+            return f"{start_bracket}{start}, {end}{end_bracket}"
+
+        dot = Digraph(comment="Zone Automaton by State")
+        # Configurar la orientación en landscape: rankdir=LR indica una disposición de izquierda a derecha.
+        dot.attr('graph', size="11,8.5!", margin="0.1", rankdir="LR")
+
+        # Agrupar los estados extendidos por su estado discreto.
+        state_groups = {}
+        for state in self.states:
+            discrete_state, zone = state
+            state_groups.setdefault(discrete_state, []).append(state)
+
+        node_ids = {}
+        # Crear subgrafos para cada estado discreto
+        for discrete_state, states_group in state_groups.items():
+            with dot.subgraph(name=f"cluster_{discrete_state}") as c:
+                c.attr(label=discrete_state)
+                # Usar rank=same para que se alineen en la misma fila.
+                c.attr(rank='same')
+                for state in states_group:
+                    _, zone = state
+                    node_id = f"{state[0]}_{zone[0]}_{zone[1]}_{int(zone[2])}_{int(zone[3])}"
+                    node_ids[state] = node_id
+                    label = f"{state[0]}\n{format_zone(zone)}"
+                    c.node(node_id, label=label)
+
+        # Agrupar y dibujar las transiciones, similar al método original.
+        edge_groups = {}
+        for src, event, dst in self.transitions:
+            key = (src, dst)
+            if key not in edge_groups:
+                edge_groups[key] = set()
+            edge_groups[key].add(event)
+
+        for (src, dst), events in edge_groups.items():
+            src_id = node_ids[src]
+            dst_id = node_ids[dst]
+            sorted_events = sorted(events)
+            if len(sorted_events) > 1:
+                label = "{" + ", ".join(sorted_events) + "}"
+            else:
+                label = sorted_events[0]
+            dot.edge(src_id, dst_id, label=label)
+
+        dot.render(filename, format=format, cleanup=True)
+        return dot

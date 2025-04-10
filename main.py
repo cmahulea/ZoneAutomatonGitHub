@@ -33,8 +33,7 @@ def main():
     print("Number of transitions in the zone automaton:", len(zone_automaton.transitions))
     print("Number of events in the zone automaton:", len(zone_automaton.events))
 
-    zone_automaton.draw_automaton("zone_automaton","pdf")
-
+    zone_automaton.draw_automaton_by_state("zone_automaton","pdf")
     #reduced_zone_automaton1 = zone_automaton.reduce_adjacent_states()
     #reduced_zone_automaton.draw_automaton("zone_automaton_reduced", "pdf")
 
