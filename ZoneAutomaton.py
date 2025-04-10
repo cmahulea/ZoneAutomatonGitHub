@@ -147,8 +147,11 @@ class ZoneAutomaton:
 
         # Process each state in the TFA.
         for state in timed_automaton.states:
-            bounds = all_bounds.get(state, [])
-            #bounds = all_bounds_values
+            #bounds = all_bounds.get(state, [])
+            #lower_value = 0
+            #upper_value = 6
+            bounds = all_bounds_values
+            #bounds = list(range(lower_value, upper_value))
             # Use state-specific intervals if available; otherwise, fall back to global intervals.
             zone_intervals = compute_intervals(bounds) if bounds else zone_intervals_global
             extended_states_for_state = []

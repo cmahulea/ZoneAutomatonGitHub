@@ -1,7 +1,7 @@
 from TimedAutomaton import TimedFiniteAutomaton
 from ZoneAutomaton import ZoneAutomaton  # Import the ZoneAutomaton class
 from TFA_ex2 import draw_observer
-from TFA_ex3 import define_example
+from TFA_ex6 import define_example
 
 
 
